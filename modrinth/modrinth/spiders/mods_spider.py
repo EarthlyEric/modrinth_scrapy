@@ -1,7 +1,7 @@
 import os
 import scrapy
 from scrapy_playwright.page import PageMethod
-from tqdm import tqdm  # 新增 tqdm 匯入
+from tqdm import tqdm
 
 from modrinth.items import ModsMetadataItem
 
@@ -11,48 +11,70 @@ class ModsSpider(scrapy.Spider):
     base_url = "https://modrinth.com"
     start_url = "https://modrinth.com/mods"
     MAX_PAGES = None
-    CURRENT_PAGE = 1
-    ALL_LOADERS = ["Fabric", "Forge", "NeoForge", "Quilt", "LiteLoader", "Risugami's ModLoader", "Rift"]    
-    
+    progress_file = "progress.txt"
+    ALL_LOADERS = ["Fabric", "Forge", "NeoForge", "Quilt", "LiteLoader", "Risugami's ModLoader", "Rift"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.CURRENT_PAGE = self.load_progress()
+
+    def load_progress(self):
+        if os.path.exists(self.progress_file):
+            try:
+                with open(self.progress_file, "r") as f:
+                    page = int(f.read().strip())
+                    return page + 1
+            except Exception as e:
+                self.logger.warning("Failed to load progress: %s", e)
+        return 1
+
+    def save_progress(self):
+        try:
+            with open(self.progress_file, "w") as f:
+                f.write(str(self.CURRENT_PAGE))
+        except Exception as e:
+            self.logger.warning("Failed to save progress: %s", e)
+
     def start_requests(self):
         os.system('cls' if os.name == 'nt' else 'clear')
-        print("Starting Mods Spider...")
+        self.logger.info("Starting Mods Spider…")
         yield scrapy.Request(
             self.start_url,
             meta={
                 "playwright": True,
                 "playwright_page_methods": [
-                    PageMethod("wait_for_selector", "#search-results",timeout=60000),
+                    PageMethod("wait_for_selector", "#search-results", timeout=60000),
                 ]
             },
-            callback=self.parse
+            callback=self.parse,
+            errback=self.errback
         )
-    
-    def next_page(self, response):
+
+    def next_page(self):
         next_page_url = f"{self.start_url}?page={self.CURRENT_PAGE}"
-        
-        if self.CURRENT_PAGE <= self.MAX_PAGES:
-            yield scrapy.Request(
-                response.urljoin(next_page_url),
-                meta={
-                    "playwright": True,
-                    "playwright_page_methods": [
-                        PageMethod("wait_for_selector", "#search-results", timeout=60000),
-                    ]
-                },
-                callback=self.parse,
-            )
-    
+        yield scrapy.Request(
+            next_page_url,
+            meta={
+                "playwright": True,
+                "playwright_page_methods": [
+                    PageMethod("wait_for_selector", "#search-results", timeout=60000),
+                ]
+            },
+            callback=self.parse,
+            errback=self.errback
+        )
 
     def parse(self, response):
         if self.MAX_PAGES is None:
-            self.MAX_PAGES = int(str(response.xpath(
+            max_page_text = response.xpath(
                 '//*[@id="__nuxt"]/div[4]/main/div[5]/section[2]/div/div[2]/div[5]/div[4]/div/a/text()'
-            ).get()))
+            ).get()
+            self.MAX_PAGES = int(max_page_text) if max_page_text and max_page_text.isdigit() else 1
             self.progress_bar = tqdm(total=self.MAX_PAGES, desc="Crawling Pages")
-            
+            if self.CURRENT_PAGE > 1:
+                self.progress_bar.update(self.CURRENT_PAGE - 1)
+
         mod_list = response.xpath('//*[@id="search-results"]//article[contains(@class, "project-card")]')
-        
         for mod in mod_list:
             item = ModsMetadataItem()
             item['icon_url'] = mod.xpath('.//a[contains(@class, "icon")]/img/@src').get()
@@ -71,35 +93,44 @@ class ModsSpider(scrapy.Spider):
                     loaders.append(tag)
                 else:
                     categories.append(tag)
-                    
             item['categories'] = categories
             item['loaders'] = loaders
-            
+
             item['downloads'] = mod.xpath('.//div[contains(@class,"stats")]/div[contains(@class,"stat")][1]//strong/text()').get()
             item['followers'] = mod.xpath('.//div[contains(@class,"stats")]/div[contains(@class,"stat")][2]//strong/text()').get()
             
-            debug = False
-            if debug:
-                print(f"Icon URL: {item['icon_url']}")
-                print(f"Name: {item['name']}")
-                print(f"Mod URL: {item['mod_url']}")
-                print(f"Author: {item['author']}")
-                print(f"Author URL: {item['author_url']}")
-                print(f"Description: {item['description']}")
-                print(f"Categories: {item['categories']}")
-                print(f"Environment: {item['environment']}")
-                print(f"Loader: {item['loaders']}")
-                print(f"Downloads: {item['downloads']}")
-                print(f"Followers: {item['followers']}")
-                print("-" * 50)
-
             yield item
-        
+
+        self.save_progress()
+
         if self.CURRENT_PAGE < self.MAX_PAGES:
             self.progress_bar.update(1)
             self.CURRENT_PAGE += 1
-            yield from self.next_page(response)
+            yield from self.next_page()
+
+    def errback(self, failure):
+        self.logger.error("Request failed: %s", failure.request.url)
+        self.logger.error(repr(failure))
+        self.save_progress()
+        if self.MAX_PAGES is None:
+            self.logger.info("Retrying the first page request...")
+            yield scrapy.Request(
+                self.start_url,
+                meta={
+                    "playwright": True,
+                    "playwright_page_methods": [
+                        PageMethod("wait_for_selector", "#search-results", timeout=60000),
+                    ]
+                },
+                callback=self.parse,
+                errback=self.errback
+            )
+        elif self.CURRENT_PAGE < self.MAX_PAGES:
+            self.logger.info("Resuming to page %s", self.CURRENT_PAGE + 1)
+            self.CURRENT_PAGE += 1
+            yield from self.next_page()
 
     def closed(self, reason):
         if hasattr(self, 'progress_bar'):
             self.progress_bar.close()
+        self.logger.info("Spider closed. Current page: %s", self.CURRENT_PAGE)
