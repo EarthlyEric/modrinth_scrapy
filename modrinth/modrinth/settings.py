@@ -96,7 +96,7 @@ DOWNLOAD_HANDLERS = {
 }
 PLAYWRIGHT_BROWSER_TYPE = "chromium"
 
-with open("prxoy.txt", "r") as f:
+with open("proxy.txt", "r") as f:
     proxy_server = f.read().strip()
 
 PLAYWRIGHT_LAUNCH_OPTIONS = {
