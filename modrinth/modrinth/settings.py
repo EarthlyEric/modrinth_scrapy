@@ -95,11 +95,14 @@ DOWNLOAD_HANDLERS = {
     "https": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
 }
 PLAYWRIGHT_BROWSER_TYPE = "chromium"
+
+with open("prxoy.txt", "r") as f:
+    proxy_server = f.read().strip()
+
 PLAYWRIGHT_LAUNCH_OPTIONS = {
     "headless": True,
     "proxy": {
-        # Please replace with your proxy settings
-        "server": "http://192.168.1.3:8118",
+        "server": proxy_server,
     }  
 }
 DOWNLOAD_TIMEOUT = 600           
