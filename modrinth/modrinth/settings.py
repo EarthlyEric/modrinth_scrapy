@@ -98,6 +98,7 @@ PLAYWRIGHT_BROWSER_TYPE = "chromium"
 PLAYWRIGHT_LAUNCH_OPTIONS = {
     "headless": True,
     "proxy": {
+        # Please replace with your proxy settings
         "server": "http://192.168.1.3:8118",
     }  
 }
