@@ -1,5 +1,7 @@
+import os
 import scrapy
 from scrapy_playwright.page import PageMethod
+from tqdm import tqdm  # 新增 tqdm 匯入
 
 from modrinth.items import ModsMetadataItem
 
@@ -13,6 +15,8 @@ class ModsSpider(scrapy.Spider):
     ALL_LOADERS = ["Fabric", "Forge", "NeoForge", "Quilt", "LiteLoader", "Risugami's ModLoader", "Rift"]    
     
     def start_requests(self):
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("Starting Mods Spider...")
         yield scrapy.Request(
             self.start_url,
             meta={
@@ -46,6 +50,7 @@ class ModsSpider(scrapy.Spider):
             self.MAX_PAGES = int(str(response.xpath(
                 '//*[@id="__nuxt"]/div[4]/main/div[5]/section[2]/div/div[2]/div[5]/div[4]/div/a/text()'
             ).get()))
+            self.progress_bar = tqdm(total=self.MAX_PAGES, desc="Crawling Pages")
             
         mod_list = response.xpath('//*[@id="search-results"]//article[contains(@class, "project-card")]')
         
@@ -92,5 +97,10 @@ class ModsSpider(scrapy.Spider):
             yield item
         
         if self.CURRENT_PAGE < self.MAX_PAGES:
+            self.progress_bar.update(1)
             self.CURRENT_PAGE += 1
             yield from self.next_page(response)
+
+    def closed(self, reason):
+        if hasattr(self, 'progress_bar'):
+            self.progress_bar.close()
