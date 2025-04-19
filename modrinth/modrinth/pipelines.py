@@ -8,6 +8,6 @@
 from itemadapter import ItemAdapter
 
 
-class ModrithPipeline:
+class ModrinthPipeline:
     def process_item(self, item, spider):
         return item
