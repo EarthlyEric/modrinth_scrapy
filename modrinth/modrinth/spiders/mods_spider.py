@@ -37,7 +37,6 @@ class ModsSpider(scrapy.Spider):
                 meta={
                     "playwright": True,
                     "playwright_page_methods": [
-                        PageMethod("wait_for_load_state", "networkidle"),
                         PageMethod("wait_for_selector", "#search-results", timeout=60000),
                     ]
                 },
