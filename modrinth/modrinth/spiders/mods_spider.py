@@ -25,7 +25,7 @@ class ModsSpider(scrapy.Spider):
                     page = int(f.read().strip())
                     return page + 1
             except Exception as e:
-                self.logger.warning("Failed to load progress: %s", e)
+                print("Failed to load progress: %s", e)
         return 1
 
     def save_progress(self):
@@ -33,11 +33,11 @@ class ModsSpider(scrapy.Spider):
             with open(self.progress_file, "w") as f:
                 f.write(str(self.CURRENT_PAGE))
         except Exception as e:
-            self.logger.warning("Failed to save progress: %s", e)
+            print("Failed to save progress: %s", e)
 
     def start_requests(self):
         os.system('cls' if os.name == 'nt' else 'clear')
-        self.logger.info("Starting Mods Spider…")
+        print("Starting Mods Spider…")
         yield scrapy.Request(
             self.start_url,
             meta={
@@ -113,7 +113,7 @@ class ModsSpider(scrapy.Spider):
         self.logger.error(repr(failure))
         self.save_progress()
         if self.MAX_PAGES is None:
-            self.logger.info("Retrying the first page request...")
+            print("Retrying the first page request...")
             yield scrapy.Request(
                 self.start_url,
                 meta={
@@ -126,11 +126,11 @@ class ModsSpider(scrapy.Spider):
                 errback=self.errback
             )
         elif self.CURRENT_PAGE < self.MAX_PAGES:
-            self.logger.info("Resuming to page %s", self.CURRENT_PAGE + 1)
+            print("Resuming to page %s", self.CURRENT_PAGE + 1)
             self.CURRENT_PAGE += 1
             yield from self.next_page()
 
     def closed(self, reason):
         if hasattr(self, 'progress_bar'):
             self.progress_bar.close()
-        self.logger.info("Spider closed. Current page: %s", self.CURRENT_PAGE)
+        print.info("Spider closed. Current page: %s", self.CURRENT_PAGE)
