@@ -1,1 +1,1 @@
-scrapy crawl mods_spider -o mods.csv 
+scrapy crawl mods_spider -o modrinth_mods_data.csv 
