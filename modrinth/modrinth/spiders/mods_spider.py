@@ -133,4 +133,4 @@ class ModsSpider(scrapy.Spider):
     def closed(self, reason):
         if hasattr(self, 'progress_bar'):
             self.progress_bar.close()
-        print.info("Spider closed. Current page: %s", self.CURRENT_PAGE)
+        print("Spider closed. Current page: %s", self.CURRENT_PAGE)
