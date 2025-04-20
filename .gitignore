@@ -9,4 +9,5 @@ wheels/
 # Virtual environments
 .venv
 
-./modrinth/*.csv
+/modrinth/*.csv
+/datasets/notebooks/*.csv
