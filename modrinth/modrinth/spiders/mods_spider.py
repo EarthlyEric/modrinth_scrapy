@@ -109,7 +109,7 @@ class ModsSpider(scrapy.Spider):
             yield from self.next_page()
 
     def errback(self, failure):
-        print("Request failed: %s", failure.request.url)
+        print(f"Request failed: {failure.request.url}")
         print(repr(failure))
         self.save_progress()
         if self.MAX_PAGES is None:
@@ -126,10 +126,10 @@ class ModsSpider(scrapy.Spider):
                 errback=self.errback
             )
         elif self.CURRENT_PAGE < self.MAX_PAGES:
-            print("Resuming to page %s", self.CURRENT_PAGE)
+            print(f"Resuming to page {self.CURRENT_PAGE}")
             yield from self.next_page()
 
     def closed(self, reason):
         if hasattr(self, 'progress_bar'):
             self.progress_bar.close()
-        print("Spider closed. Current page: %s", self.CURRENT_PAGE)
+        print(f"Spider closed. Current page: {self.CURRENT_PAGE}")
