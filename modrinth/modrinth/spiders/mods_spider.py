@@ -9,7 +9,7 @@ class ModsSpider(scrapy.Spider):
     name = "mods_spider"
     allowed_domains = ["modrinth.com"]
     base_url = "https://modrinth.com"
-    start_url = "https://modrinth.com/mods"
+    start_url = "https://modrinth.com/mods?m=100"
     MAX_PAGES = None
     progress_file = "progress.txt"
     ALL_LOADERS = ["Fabric", "Forge", "NeoForge", "Quilt", "LiteLoader", "Risugami's ModLoader", "Rift"]
@@ -51,7 +51,7 @@ class ModsSpider(scrapy.Spider):
         )
 
     def next_page(self):
-        next_page_url = f"{self.start_url}?page={self.CURRENT_PAGE}"
+        next_page_url = f"{self.start_url}&page={self.CURRENT_PAGE}"
         yield scrapy.Request(
             next_page_url,
             meta={
